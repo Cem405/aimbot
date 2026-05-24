@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
@@ -47,14 +46,14 @@ jpBox.PlaceholderText = "JumpPower"
 jpBox.Text = ""
 jpBox.Parent = frame
 
--- BUTTON NOCLIP
+-- NOCLIP BUTTON
 local noclipBtn = Instance.new("TextButton")
 noclipBtn.Size = UDim2.new(1, -10, 0, 30)
 noclipBtn.Position = UDim2.new(0, 5, 0, 120)
 noclipBtn.Text = "NoClip: OFF"
 noclipBtn.Parent = frame
 
--- BUTTON NODAMAGE
+-- NODAMAGE BUTTON
 local ndBtn = Instance.new("TextButton")
 ndBtn.Size = UDim2.new(1, -10, 0, 30)
 ndBtn.Position = UDim2.new(0, 5, 0, 160)
@@ -94,13 +93,23 @@ wsBox.FocusLost:Connect(function()
 	end
 end)
 
--- JUMP POWER
+-- =====================
+-- 🔥 FIXED JUMP SYSTEM
+-- =====================
 jpBox.FocusLost:Connect(function()
 	local char = getChar()
 	if not char then return end
+
 	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.JumpPower = tonumber(jpBox.Text) or hum.JumpPower
+	if not hum then return end
+
+	local value = tonumber(jpBox.Text)
+	if not value then return end
+
+	if hum.UseJumpPower then
+		hum.JumpPower = value
+	else
+		hum.JumpHeight = value / 1.2
 	end
 end)
 
