@@ -12,9 +12,9 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 local enabled = false
-local speed = 56
+local SPEED = 56
 
--- GET SINGLE TARGET
+-- GET TARGET (einfach 1 anderer Spieler)
 local function getTarget()
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -24,17 +24,10 @@ local function getTarget()
 	return nil
 end
 
--- SPEED INPUT
-Tab:CreateInput({
-   Name = "Chase Speed",
-   Callback = function(v)
-      speed = tonumber(v) or 56
-   end,
-})
-
--- TOGGLE
+-- TOGGLE CHASE
 Tab:CreateToggle({
    Name = "Auto Chase",
+   CurrentValue = false,
    Callback = function(v)
       enabled = v
    end,
@@ -60,7 +53,7 @@ RunService.RenderStepped:Connect(function()
 	local direction = (tRoot.Position - root.Position)
 
 	if direction.Magnitude > 2 then
-		hum.WalkSpeed = speed
+		hum.WalkSpeed = SPEED
 		hum:Move(direction.Unit)
 	else
 		hum:Move(Vector3.zero)
