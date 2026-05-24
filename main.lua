@@ -37,28 +37,28 @@ wsBox.PlaceholderText = "WalkSpeed"
 wsBox.Text = ""
 wsBox.Parent = frame
 
--- INFINITE JUMP BUTTON
+-- INFINITE JUMP
 local infBtn = Instance.new("TextButton")
 infBtn.Size = UDim2.new(1, -10, 0, 30)
 infBtn.Position = UDim2.new(0, 5, 0, 80)
 infBtn.Text = "Infinite Jump: OFF"
 infBtn.Parent = frame
 
--- NOCLIP BUTTON
+-- NOCLIP
 local noclipBtn = Instance.new("TextButton")
 noclipBtn.Size = UDim2.new(1, -10, 0, 30)
 noclipBtn.Position = UDim2.new(0, 5, 0, 120)
 noclipBtn.Text = "NoClip: OFF"
 noclipBtn.Parent = frame
 
--- NODAMAGE BUTTON
+-- NODAMAGE
 local ndBtn = Instance.new("TextButton")
 ndBtn.Size = UDim2.new(1, -10, 0, 30)
 ndBtn.Position = UDim2.new(0, 5, 0, 160)
 ndBtn.Text = "NoDamage: OFF"
 ndBtn.Parent = frame
 
--- MINIMIZE BUTTON
+-- MINIMIZE
 local miniBtn = Instance.new("TextButton")
 miniBtn.Size = UDim2.new(1, -10, 0, 30)
 miniBtn.Position = UDim2.new(0, 5, 0, 200)
@@ -72,6 +72,7 @@ icon.Text = "DEV"
 icon.Visible = false
 icon.Parent = gui
 
+-- FUNCTIONS
 local function getChar()
 	local char = player.Character
 	if not char then return nil end
@@ -116,6 +117,7 @@ end)
 RunService.Stepped:Connect(function()
 	if noclip then
 		local char = getChar()
+
 		if char then
 			for _, v in pairs(char:GetDescendants()) do
 				if v:IsA("BasePart") then
@@ -130,17 +132,17 @@ end)
 ndBtn.MouseButton1Click:Connect(function()
 	nodamage = not nodamage
 	ndBtn.Text = nodamage and "NoDamage: ON" or "NoDamage: OFF"
+end)
 
-	local char = getChar()
-	if char then
+RunService.RenderStepped:Connect(function()
+	if nodamage then
+		local char = getChar()
+		if not char then return end
+
 		local hum = char:FindFirstChildOfClass("Humanoid")
 
-		if hum then
-			hum.HealthChanged:Connect(function()
-				if nodamage then
-					hum.Health = hum.MaxHealth
-				end
-			end)
+		if hum and hum.Health < hum.MaxHealth then
+			hum.Health = hum.MaxHealth
 		end
 	end
 end)
