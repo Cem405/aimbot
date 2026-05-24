@@ -1,68 +1,150 @@
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
 
-local enabled = false
-local minimized = false
+-- STATES
+local noclip = false
+local nodamage = false
 
 -- =====================
 -- UI
 -- =====================
 local gui = Instance.new("ScreenGui")
-gui.Name = "GhostUI"
+gui.Name = "DevToolUI"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 120)
-frame.Position = UDim2.new(0.05, 0, 0.4, 0)
+frame.Size = UDim2.new(0, 220, 0, 260)
+frame.Position = UDim2.new(0.05, 0, 0.3, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Active = true
+frame.Draggable = true
 frame.Parent = gui
 
--- TITLE
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0.3, 0)
-title.Text = "Ghost Mode"
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "Dev Tool"
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 title.Parent = frame
 
--- TOGGLE BUTTON
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(1, 0, 0.35, 0)
-button.Position = UDim2.new(0, 0, 0.3, 0)
-button.Text = "OFF"
-button.BackgroundColor3 = Color3.fromRGB(80,80,80)
-button.TextColor3 = Color3.new(1,1,1)
-button.Parent = frame
+-- INPUT SPEED
+local wsBox = Instance.new("TextBox")
+wsBox.Size = UDim2.new(1, -10, 0, 30)
+wsBox.Position = UDim2.new(0, 5, 0, 40)
+wsBox.PlaceholderText = "WalkSpeed"
+wsBox.Text = ""
+wsBox.Parent = frame
 
-button.MouseButton1Click:Connect(function()
-	enabled = not enabled
+-- INPUT JUMP
+local jpBox = Instance.new("TextBox")
+jpBox.Size = UDim2.new(1, -10, 0, 30)
+jpBox.Position = UDim2.new(0, 5, 0, 80)
+jpBox.PlaceholderText = "JumpPower"
+jpBox.Text = ""
+jpBox.Parent = frame
 
-	player:SetAttribute("GhostMode", enabled)
+-- BUTTON NOCLIP
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(1, -10, 0, 30)
+noclipBtn.Position = UDim2.new(0, 5, 0, 120)
+noclipBtn.Text = "NoClip: OFF"
+noclipBtn.Parent = frame
 
-	button.Text = enabled and "ON" or "OFF"
-	button.BackgroundColor3 = enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(80,80,80)
-end)
+-- BUTTON NODAMAGE
+local ndBtn = Instance.new("TextButton")
+ndBtn.Size = UDim2.new(1, -10, 0, 30)
+ndBtn.Position = UDim2.new(0, 5, 0, 160)
+ndBtn.Text = "NoDamage: OFF"
+ndBtn.Parent = frame
 
--- MINIMIZE BUTTON
-local mini = Instance.new("TextButton")
-mini.Size = UDim2.new(0, 25, 0, 25)
-mini.Position = UDim2.new(1, -30, 0, 5)
-mini.Text = "-"
-mini.BackgroundColor3 = Color3.fromRGB(60,60,60)
-mini.TextColor3 = Color3.new(1,1,1)
-mini.Parent = frame
+-- MINIMIZE
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(1, -10, 0, 30)
+miniBtn.Position = UDim2.new(0, 5, 0, 200)
+miniBtn.Text = "Minimize"
+miniBtn.Parent = frame
 
 local icon = Instance.new("TextButton")
 icon.Size = UDim2.new(0, 60, 0, 40)
 icon.Position = UDim2.new(0, 10, 0.8, 0)
-icon.Text = "GM"
+icon.Text = "DEV"
 icon.Visible = false
-icon.BackgroundColor3 = Color3.fromRGB(40,40,40)
-icon.TextColor3 = Color3.new(1,1,1)
 icon.Parent = gui
 
-mini.MouseButton1Click:Connect(function()
+-- =====================
+-- FUNCTIONS
+-- =====================
+local function getChar()
+	local char = player.Character
+	if not char then return nil end
+	return char
+end
+
+-- WALK SPEED
+wsBox.FocusLost:Connect(function()
+	local char = getChar()
+	if not char then return end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = tonumber(wsBox.Text) or hum.WalkSpeed
+	end
+end)
+
+-- JUMP POWER
+jpBox.FocusLost:Connect(function()
+	local char = getChar()
+	if not char then return end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.JumpPower = tonumber(jpBox.Text) or hum.JumpPower
+	end
+end)
+
+-- NOCLIP
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	noclipBtn.Text = noclip and "NoClip: ON" or "NoClip: OFF"
+end)
+
+RunService.Stepped:Connect(function()
+	if noclip then
+		local char = getChar()
+		if char then
+			for _, v in pairs(char:GetDescendants()) do
+				if v:IsA("BasePart") then
+					v.CanCollide = false
+				end
+			end
+		end
+	end
+end)
+
+-- NODAMAGE (client test)
+ndBtn.MouseButton1Click:Connect(function()
+	nodamage = not nodamage
+	ndBtn.Text = nodamage and "NoDamage: ON" or "NoDamage: OFF"
+
+	local char = getChar()
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.HealthChanged:Connect(function()
+				if nodamage then
+					hum.Health = hum.MaxHealth
+				end
+			end)
+		end
+	end
+end)
+
+-- MINIMIZE
+local minimized = false
+
+miniBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 
 	frame.Visible = not minimized
