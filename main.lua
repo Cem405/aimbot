@@ -2,15 +2,23 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
 local enabled = false
 local minimized = false
 
 -- =====================
--- UI
+-- UI RESET SAFE
 -- =====================
+local old = playerGui:FindFirstChild("MiniJumpUI")
+if old then
+	old:Destroy()
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "MiniJumpUI"
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 180, 0, 90)
@@ -44,7 +52,7 @@ end)
 -- MINIMIZE BUTTON
 local miniBtn = Instance.new("TextButton")
 miniBtn.Size = UDim2.new(0, 25, 0, 25)
-miniBtn.Position = UDim2.new(1, -55, 0, 5)
+miniBtn.Position = UDim2.new(1, -30, 0, 5)
 miniBtn.Text = "-"
 miniBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 miniBtn.TextColor3 = Color3.new(1,1,1)
@@ -65,7 +73,14 @@ miniBtn.MouseButton1Click:Connect(function()
 end)
 
 -- =====================
--- INFINITE JUMP
+-- FIX 1: SAFE GROUND CHECK
+-- =====================
+local function isOnGround(hum)
+	return hum and hum.FloorMaterial ~= Enum.Material.Air
+end
+
+-- =====================
+-- INFINITE JUMP FIXED
 -- =====================
 UserInputService.JumpRequest:Connect(function()
 	if not enabled then return end
@@ -76,5 +91,8 @@ UserInputService.JumpRequest:Connect(function()
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if not hum then return end
 
-	hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	-- 🔥 prevents air respawn bug
+	if isOnGround(hum) then
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
 end)
