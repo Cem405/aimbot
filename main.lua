@@ -1,15 +1,14 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
--- STATES
 local noclip = false
 local nodamage = false
+local infjump = false
 
--- =====================
 -- UI
--- =====================
 local gui = Instance.new("ScreenGui")
 gui.Name = "DevToolUI"
 gui.ResetOnSpawn = false
@@ -30,7 +29,7 @@ title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 title.Parent = frame
 
--- INPUT SPEED
+-- WALKSPEED
 local wsBox = Instance.new("TextBox")
 wsBox.Size = UDim2.new(1, -10, 0, 30)
 wsBox.Position = UDim2.new(0, 5, 0, 40)
@@ -38,13 +37,12 @@ wsBox.PlaceholderText = "WalkSpeed"
 wsBox.Text = ""
 wsBox.Parent = frame
 
--- INPUT JUMP
-local jpBox = Instance.new("TextBox")
-jpBox.Size = UDim2.new(1, -10, 0, 30)
-jpBox.Position = UDim2.new(0, 5, 0, 80)
-jpBox.PlaceholderText = "JumpPower"
-jpBox.Text = ""
-jpBox.Parent = frame
+-- INFINITE JUMP BUTTON
+local infBtn = Instance.new("TextButton")
+infBtn.Size = UDim2.new(1, -10, 0, 30)
+infBtn.Position = UDim2.new(0, 5, 0, 80)
+infBtn.Text = "Infinite Jump: OFF"
+infBtn.Parent = frame
 
 -- NOCLIP BUTTON
 local noclipBtn = Instance.new("TextButton")
@@ -60,7 +58,7 @@ ndBtn.Position = UDim2.new(0, 5, 0, 160)
 ndBtn.Text = "NoDamage: OFF"
 ndBtn.Parent = frame
 
--- MINIMIZE
+-- MINIMIZE BUTTON
 local miniBtn = Instance.new("TextButton")
 miniBtn.Size = UDim2.new(1, -10, 0, 30)
 miniBtn.Position = UDim2.new(0, 5, 0, 200)
@@ -74,42 +72,38 @@ icon.Text = "DEV"
 icon.Visible = false
 icon.Parent = gui
 
--- =====================
--- FUNCTIONS
--- =====================
 local function getChar()
 	local char = player.Character
 	if not char then return nil end
 	return char
 end
 
--- WALK SPEED
+-- WALKSPEED
 wsBox.FocusLost:Connect(function()
 	local char = getChar()
 	if not char then return end
+
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.WalkSpeed = tonumber(wsBox.Text) or hum.WalkSpeed
 	end
 end)
 
--- =====================
--- 🔥 FIXED JUMP SYSTEM
--- =====================
-jpBox.FocusLost:Connect(function()
-	local char = getChar()
-	if not char then return end
+-- INFINITE JUMP
+infBtn.MouseButton1Click:Connect(function()
+	infjump = not infjump
+	infBtn.Text = infjump and "Infinite Jump: ON" or "Infinite Jump: OFF"
+end)
 
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hum then return end
+UserInputService.JumpRequest:Connect(function()
+	if infjump then
+		local char = getChar()
+		if not char then return end
 
-	local value = tonumber(jpBox.Text)
-	if not value then return end
-
-	if hum.UseJumpPower then
-		hum.JumpPower = value
-	else
-		hum.JumpHeight = value / 1.2
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
 	end
 end)
 
@@ -132,7 +126,7 @@ RunService.Stepped:Connect(function()
 	end
 end)
 
--- NODAMAGE (client test)
+-- NODAMAGE
 ndBtn.MouseButton1Click:Connect(function()
 	nodamage = not nodamage
 	ndBtn.Text = nodamage and "NoDamage: ON" or "NoDamage: OFF"
@@ -140,6 +134,7 @@ ndBtn.MouseButton1Click:Connect(function()
 	local char = getChar()
 	if char then
 		local hum = char:FindFirstChildOfClass("Humanoid")
+
 		if hum then
 			hum.HealthChanged:Connect(function()
 				if nodamage then
@@ -155,7 +150,6 @@ local minimized = false
 
 miniBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
-
 	frame.Visible = not minimized
 	icon.Visible = minimized
 end)
