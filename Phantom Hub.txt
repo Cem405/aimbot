@@ -1998,7 +1998,7 @@ makeButtonRow("Insta Reset Panel", "OPEN", function()
     ptitle.Size = UDim2.new(1, -50, 0, 36)
     ptitle.Position = UDim2.new(0, 14, 0, 0)
     ptitle.BackgroundTransparency = 1
-    ptitle.Text = "opium insta reset"
+    ptitle.Text = "phantom insta reset"
     ptitle.TextColor3 = Color3.fromRGB(230,230,230)
     ptitle.Font = Enum.Font.GothamBlack
     ptitle.TextSize = 14
