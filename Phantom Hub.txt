@@ -216,7 +216,7 @@ end
 -- ============================================================
 -- CLEANUP OLD GUIs
 -- ============================================================
-for _,name in pairs({"opiumhubV5_3"}) do
+for _,name in pairs({"phantomhubV5_3"}) do
     pcall(function() local o=game:GetService("CoreGui"):FindFirstChild(name); if o then o:Destroy() end end)
     pcall(function() local o=LP:WaitForChild("PlayerGui"):FindFirstChild(name); if o then o:Destroy() end end)
 end
@@ -225,7 +225,7 @@ end
 -- ROOT GUI
 -- ============================================================
 local gui = Instance.new("ScreenGui")
-gui.Name = "opiumhubV5_3"
+gui.Name = "phantomhubV5_3"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 999
 gui.IgnoreGuiInset = true
@@ -1978,7 +1978,7 @@ local function doInstaReset()
 end
 
 makeButtonRow("Insta Reset Panel", "OPEN", function()
-    local panelName = "opiumhubInstaResetPanel"
+    local panelName = "phantomhubInstaResetPanel"
     local existing = gui:FindFirstChild(panelName)
     if existing then existing.Visible = not existing.Visible; return end
 
@@ -2093,7 +2093,7 @@ end)
 
 -- Lagger Panel
 makeButtonRow("Lagger Panel", "OPEN", function()
-    local panelName = "opiumhubLaggerPanel"
+    local panelName = "phantomhubLaggerPanel"
     local existing = gui:FindFirstChild(panelName)
     if existing then existing.Visible = not existing.Visible; return end
 
@@ -2449,12 +2449,12 @@ end)
 -- REOPEN BUTTON
 -- ============================================================
 local reopenBtn = Instance.new("TextButton", gui)
-reopenBtn.Name = "OpiumReopenBtn"
+reopenBtn.Name = "PhantomReopenBtn"
 reopenBtn.Size = UDim2.new(0, 80, 0, 32)
 reopenBtn.Position = UDim2.new(0, 10, 0, 10)
 reopenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 reopenBtn.BorderSizePixel = 0
-reopenBtn.Text = "OPIUM"
+reopenBtn.Text = "PHANTOM"
 reopenBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
 reopenBtn.Font = Enum.Font.GothamBlack
 reopenBtn.TextSize = 14
@@ -2846,7 +2846,7 @@ RunService.RenderStepped:Connect(function()
     pcall(function()
         local head2=LP.Character and LP.Character:FindFirstChild("Head")
         if head2 then
-            local bb2=head2:FindFirstChild("opiumhubBB")
+            local bb2=head2:FindFirstChild("phantomhubb")
             local sl=bb2 and bb2:FindFirstChild("SpeedBillLbl")
             if sl then
                 sl.Text=string.format("%.1f",Vector3.new(hrp.Velocity.X,0,hrp.Velocity.Z).Magnitude)
