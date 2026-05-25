@@ -378,7 +378,7 @@ mkStroke(badgeBg, Color3.fromRGB(60, 60, 60), 1)
 local badgeLbl = Instance.new("TextLabel", badgeBg)
 badgeLbl.Size = UDim2.new(1, 0, 1, 0)
 badgeLbl.BackgroundTransparency = 1
-badgeLbl.Text = "OPIUM BUYER"
+badgeLbl.Text = "PHANTOM BUYER"
 badgeLbl.TextColor3 = Color3.fromRGB(160, 160, 160)
 badgeLbl.Font = Enum.Font.GothamBold
 badgeLbl.TextSize = 9
@@ -2697,7 +2697,7 @@ local function setupChar(char)
         if oldBB then oldBB:Destroy() end
         
         local bb=Instance.new("BillboardGui",head)
-        bb.Name="opiumhubBB"
+        bb.Name="PhantomhubBB"
         bb.Size=UDim2.new(0,180,0,76)
         bb.StudsOffset=Vector3.new(0,3,0)
         bb.AlwaysOnTop=true
@@ -2731,7 +2731,7 @@ local function setupChar(char)
         lbl2.Size=UDim2.new(1,0,0,24)
         lbl2.Position=UDim2.new(0,0,0,52)
         lbl2.BackgroundTransparency=1
-        lbl2.Text="/opiumhub"
+        lbl2.Text="/PhantomHub"
         lbl2.TextColor3=Color3.fromRGB(255,255,255)
         lbl2.Font=Enum.Font.GothamBold
         lbl2.TextScaled=true
@@ -2992,4 +2992,3 @@ print("✓ Infinite Jump: FIXED with direct velocity method")
 print("✓ Auto Left/Right <-> Aimbot: FIXED mutual exclusion")
 print("✓ TP Down: Keybind added (V)")
 print("✓ Drop Brainrot: Keybind added (H)")
-
