@@ -1,6 +1,6 @@
 repeat task.wait() until game:IsLoaded()
 -- ============================================================
--- opium hub v5.3 FIXED3 - ALL FEATURES + KEYBINDS
+-- Phantom Hub v5.3 FIXED3 - ALL FEATURES + KEYBINDS
 -- ============================================================
 
 local Players         = game:GetService("Players")
@@ -2986,7 +2986,7 @@ task.spawn(function()
     end
 end)
 
-print("[OPIUM HUB v5.3 FIXED3] ✅ All fixes applied!")
+print("[PHANTOM HUB v5.3 FIXED3] ✅ All fixes applied!")
 print("✓ Bat Aimbot: FIXED velocity & tool finding")
 print("✓ Infinite Jump: FIXED with direct velocity method")
 print("✓ Auto Left/Right <-> Aimbot: FIXED mutual exclusion")
