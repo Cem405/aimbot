@@ -1,6 +1,6 @@
 repeat task.wait() until game:IsLoaded()
 -- ============================================================
--- opium hub v5.3 FIXED3 - ALL FEATURES + KEYBINDS
+-- Phantom Hub v5.3 FIXED3 - ALL FEATURES + KEYBINDS
 -- ============================================================
 
 local Players         = game:GetService("Players")
@@ -216,7 +216,7 @@ end
 -- ============================================================
 -- CLEANUP OLD GUIs
 -- ============================================================
-for _,name in pairs({"opiumhubV5_3"}) do
+for _,name in pairs({"Phantom Hub V1"}) do
     pcall(function() local o=game:GetService("CoreGui"):FindFirstChild(name); if o then o:Destroy() end end)
     pcall(function() local o=LP:WaitForChild("PlayerGui"):FindFirstChild(name); if o then o:Destroy() end end)
 end
@@ -225,7 +225,7 @@ end
 -- ROOT GUI
 -- ============================================================
 local gui = Instance.new("ScreenGui")
-gui.Name = "opiumhubV5_3"
+gui.Name = PhantomHub"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 999
 gui.IgnoreGuiInset = true
@@ -2449,7 +2449,7 @@ end)
 -- REOPEN BUTTON
 -- ============================================================
 local reopenBtn = Instance.new("TextButton", gui)
-reopenBtn.Name = "OpiumReopenBtn"
+reopenBtn.Name = "PhantomReopenBtn"
 reopenBtn.Size = UDim2.new(0, 80, 0, 32)
 reopenBtn.Position = UDim2.new(0, 10, 0, 10)
 reopenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -2986,7 +2986,7 @@ task.spawn(function()
     end
 end)
 
-print("[OPIUM HUB v5.3 FIXED3] ✅ All fixes applied!")
+print("[Phantom Hub v5.3 FIXED3] ✅ All fixes applied!")
 print("✓ Bat Aimbot: FIXED velocity & tool finding")
 print("✓ Infinite Jump: FIXED with direct velocity method")
 print("✓ Auto Left/Right <-> Aimbot: FIXED mutual exclusion")
