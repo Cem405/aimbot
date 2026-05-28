@@ -1444,6 +1444,8 @@ end
 -- ============================================================
 -- AUTO STEAL SYSTEM
 -- ============================================================
+local STEAL_RADIUS_SQUARED = Steal.StealRadius * Steal.StealRadius
+
 local function isMyPlotByName(pn)
     local ct = tick()
 
@@ -1452,6 +1454,7 @@ local function isMyPlotByName(pn)
     end
 
     local plots = workspace:FindFirstChild("Plots")
+
     if not plots then
         Steal.plotCache[pn] = false
         Steal.plotCacheTime[pn] = ct
@@ -1459,6 +1462,7 @@ local function isMyPlotByName(pn)
     end
 
     local plot = plots:FindFirstChild(pn)
+
     if not plot then
         Steal.plotCache[pn] = false
         Steal.plotCacheTime[pn] = ct
@@ -1486,7 +1490,19 @@ local function isMyPlotByName(pn)
     return false
 end
 
+local function getSquaredDistance(pos1, pos2)
+    local dx = pos1.X - pos2.X
+    local dy = pos1.Y - pos2.Y
+    local dz = pos1.Z - pos2.Z
+
+    return dx * dx + dy * dy + dz * dz
+end
+
 local function findNearestPrompt()
+    if State.isStealing then
+        return nil
+    end
+
     local char = LP.Character
     if not char then
         return nil
@@ -1505,9 +1521,9 @@ local function findNearestPrompt()
 
         for _, data in ipairs(Steal.cachedPrompts) do
             if data.spawn and data.spawn.Parent then
-                local dist = (data.spawn.Position - root.Position).Magnitude
+                local dist = getSquaredDistance(data.spawn.Position, root.Position)
 
-                if dist <= Steal.StealRadius and dist < nearestDistance then
+                if dist <= STEAL_RADIUS_SQUARED and dist < nearestDistance then
                     nearestPrompt = data.prompt
                     nearestDistance = dist
                 end
@@ -1523,14 +1539,17 @@ local function findNearestPrompt()
     Steal.promptCacheTime = ct
 
     local plots = workspace:FindFirstChild("Plots")
+
     if not plots then
         return nil
     end
 
+    local plotsChildren = plots:GetChildren()
+
     local nearestPrompt = nil
     local nearestDistance = math.huge
 
-    for _, plot in ipairs(plots:GetChildren()) do
+    for _, plot in ipairs(plotsChildren) do
         if not isMyPlotByName(plot.Name) then
             local pods = plot:FindFirstChild("AnimalPodiums")
 
@@ -1542,9 +1561,9 @@ local function findNearestPrompt()
                         local spawnPart = base:FindFirstChild("Spawn")
 
                         if spawnPart then
-                            local dist = (spawnPart.Position - root.Position).Magnitude
+                            local dist = getSquaredDistance(spawnPart.Position, root.Position)
 
-                            if dist <= Steal.StealRadius then
+                            if dist <= STEAL_RADIUS_SQUARED then
                                 local attachment = spawnPart:FindFirstChild("PromptAttachment")
 
                                 if attachment then
@@ -1624,7 +1643,7 @@ local function startAutoSteal()
                 end
             end
 
-            task.wait(0.15)
+            task.wait(0.5)
         end
     end)
 end
