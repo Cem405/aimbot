@@ -1444,202 +1444,138 @@ end
 -- ============================================================
 -- AUTO STEAL SYSTEM
 -- ============================================================
-local function isMyPlotByName(pn)
-    local ct = tick()
-
-    if Steal.plotCache[pn] ~= nil and (ct - (Steal.plotCacheTime[pn] or 0)) < PLOT_CACHE_DURATION then
-        return Steal.plotCache[pn]
-    end
-
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then
-        Steal.plotCache[pn] = false
-        Steal.plotCacheTime[pn] = ct
-        return false
-    end
-
-    local plot = plots:FindFirstChild(pn)
-    if not plot then
-        Steal.plotCache[pn] = false
-        Steal.plotCacheTime[pn] = ct
-        return false
-    end
-
-    local sign = plot:FindFirstChild("PlotSign")
-
-    if sign then
-        local yb = sign:FindFirstChild("YourBase")
-
-        if yb and yb:IsA("BillboardGui") then
-            local result = yb.Enabled == true
-
-            Steal.plotCache[pn] = result
-            Steal.plotCacheTime[pn] = ct
-
-            return result
-        end
-    end
-
-    Steal.plotCache[pn] = false
-    Steal.plotCacheTime[pn] = ct
-
-    return false
+__sb.setProgress = function(p)
+	if not __sb.stick then return end
+	p = math.clamp(p or 0, 0, 1)
+	__sb.stick.Position = UDim2.new(p, 0, 0.5, 0)
 end
 
-local function findNearestPrompt()
-    local char = LP.Character
-    if not char then
-        return nil
-    end
-
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then
-        return nil
-    end
-
-    local ct = tick()
-
-    if ct - Steal.promptCacheTime < PROMPT_CACHE_REFRESH and #Steal.cachedPrompts > 0 then
-        local nearestPrompt = nil
-        local nearestDistance = math.huge
-
-        for _, data in ipairs(Steal.cachedPrompts) do
-            if data.spawn and data.spawn.Parent then
-                local dist = (data.spawn.Position - root.Position).Magnitude
-
-                if dist <= Steal.StealRadius and dist < nearestDistance then
-                    nearestPrompt = data.prompt
-                    nearestDistance = dist
-                end
-            end
-        end
-
-        if nearestPrompt then
-            return nearestPrompt
-        end
-    end
-
-    table.clear(Steal.cachedPrompts)
-    Steal.promptCacheTime = ct
-
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then
-        return nil
-    end
-
-    local nearestPrompt = nil
-    local nearestDistance = math.huge
-
-    for _, plot in ipairs(plots:GetChildren()) do
-        if not isMyPlotByName(plot.Name) then
-            local pods = plot:FindFirstChild("AnimalPodiums")
-
-            if pods then
-                for _, pod in ipairs(pods:GetChildren()) do
-                    local base = pod:FindFirstChild("Base")
-
-                    if base then
-                        local spawnPart = base:FindFirstChild("Spawn")
-
-                        if spawnPart then
-                            local dist = (spawnPart.Position - root.Position).Magnitude
-
-                            if dist <= Steal.StealRadius then
-                                local attachment = spawnPart:FindFirstChild("PromptAttachment")
-
-                                if attachment then
-                                    for _, child in ipairs(attachment:GetChildren()) do
-                                        if child:IsA("ProximityPrompt") then
-                                            table.insert(Steal.cachedPrompts, {
-                                                prompt = child,
-                                                spawn = spawnPart
-                                            })
-
-                                            if dist < nearestDistance then
-                                                nearestPrompt = child
-                                                nearestDistance = dist
-                                            end
-
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return nearestPrompt
+__sb.freshList_get = function()
+	local now = tick()
+	if __sb.freshList and (now - __sb.freshAt) < 0.1 then
+		return __sb.freshList
+	end
+	local ok, list = pcall(scanAllPlots)
+	if ok and list then
+		__sb.freshList = list
+		__sb.freshAt = now
+	end
+	return __sb.freshList or {}
 end
 
-local function executeSteal(prompt)
-    local ct = tick()
-
-    if ct - State.lastStealTick < STEAL_COOLDOWN then
-        return
-    end
-
-    if State.isStealing then
-        return
-    end
-
-    State.isStealing = true
-    State.stealStartTime = ct
-    State.lastStealTick = ct
-
-    task.spawn(function()
-        pcall(function()
-            if fireproximityprompt then
-                fireproximityprompt(prompt, Steal.StealDuration)
-            else
-                prompt:InputHoldBegin()
-                task.wait(Steal.StealDuration)
-                prompt:InputHoldEnd()
-            end
-        end)
-
-        task.wait(3.3)
-
-        State.isStealing = false
-    end)
+__sb.nearestFromList = function(list)
+	local hrp = getHRP and getHRP() or nil
+	if not hrp then return list[1] end
+	local hp = hrp.Position
+	local best, bestD = nil, math.huge
+	for _, br in ipairs(list) do
+		local part = type(getPodiumWorldPart) == "function" and getPodiumWorldPart(br) or nil
+		local pos = part and part:GetPivot().Position or br.position
+		if pos then
+			local dx, dz = hp.X - pos.X, hp.Z - pos.Z
+			local dy = math.abs(hp.Y - pos.Y)
+			local d = math.sqrt(dx*dx + dz*dz) + (dy > 6 and dy * 4 or 0)
+			if d < bestD then bestD = d; best = br end
+		end
+	end
+	return best
 end
 
-local function startAutoSteal()
-    if Conns.autoSteal then
-        return
-    end
-
-    Conns.autoSteal = true
-
-    task.spawn(function()
-        while Conns.autoSteal and Steal.AutoStealEnabled do
-            if not State.isStealing then
-                local prompt = findNearestPrompt()
-
-                if prompt then
-                    executeSteal(prompt)
-                end
-            end
-
-            task.wait(2.5)
-        end
-    end)
+__sb.currentTarget = function()
+	if not G then return nil end
+	if not (G.AutoStealBest or G.AutoStealNearest or G.AutoStealPriority) then
+		return nil
+	end
+	local ok, target = pcall(function()
+		local list = __sb.freshList_get()
+		if G.AutoStealPriority then
+			for _, br in ipairs(list) do
+				if type(isPriorityBrainrot) == "function" and isPriorityBrainrot(br) then
+					return br
+				end
+			end
+		end
+		if G.AutoStealBest then
+			return list[1]
+		end
+		if G.AutoStealNearest then
+			return __sb.nearestFromList(list)
+		end
+		return nil
+	end)
+	return ok and target or nil
 end
 
-local function stopAutoSteal()
-    Conns.autoSteal = false
-
-    State.isStealing = false
-    State.lastStealTick = 0
-
-    table.clear(Steal.plotCache)
-    table.clear(Steal.plotCacheTime)
-    table.clear(Steal.cachedPrompts)
+__sb.findByPrompt = function(prompt)
+	if not prompt then return nil end
+	for _, br in ipairs(__sb.freshList_get()) do
+		if br.prompt == prompt then return br end
+	end
+	return nil
 end
 
+__sb.updateLabel = function()
+	if not __sb.label then return end
+	local t = __sb.lockedPrompt and __sb.findByPrompt(__sb.lockedPrompt) or __sb.currentTarget()
+	if t and t.displayName then
+		local gen = t.gen or t.generation or ""
+		if gen ~= "" then
+			__sb.label.Text = ("Stealing: %s  -  %s"):format(tostring(t.displayName), tostring(gen))
+		else
+			__sb.label.Text = "Stealing: " .. tostring(t.displayName)
+		end
+	else
+		__sb.label.Text = "Chiraq Hub  -  No target"
+	end
+end
+
+__sb.build()
+
+__sb.hasTarget = function()
+	if __sb.lockedPrompt then return true end
+	return __sb.currentTarget() ~= nil
+end
+
+RunService.RenderStepped:Connect(function()
+	__sb.updateLabel()
+	if __sb.lockedPrompt and __sb.lockedAt then
+		local p = (tick() - __sb.lockedAt) / __sb.cycle
+		if p >= 1 then
+			__sb.setProgress(1)
+		else
+			__sb.setProgress(p)
+		end
+	else
+		__sb.setProgress(0)
+	end
+end)
+
+local __stealCbCache = {}
+local function __buildStealCallbacks(prompt)
+	if __stealCbCache[prompt] then return __stealCbCache[prompt] end
+	if not getconnections then return nil end
+	local data = { hold = {}, trigger = {} }
+	local ok1, conns1 = pcall(getconnections, prompt.PromptButtonHoldBegan)
+	if ok1 and type(conns1) == "table" then
+		for _, c in ipairs(conns1) do
+			if type(c.Function) == "function" then table.insert(data.hold, c.Function) end
+		end
+	end
+	local ok2, conns2 = pcall(getconnections, prompt.Triggered)
+	if ok2 and type(conns2) == "table" then
+		for _, c in ipairs(conns2) do
+			if type(c.Function) == "function" then table.insert(data.trigger, c.Function) end
+		end
+	end
+	if #data.hold == 0 and #data.trigger == 0 then return nil end
+	__stealCbCache[prompt] = data
+	return data
+end
+
+local __MIN_HOLD_TIME = 1.3
+local __POST_RAGDOLL_GAP = 0.01
+local __TRIGGER_AFTER_GREEN = 0.03
+local __RAGDOLL_FALLBACK = 3.0
 -- ============================================================
 -- PRESET APPLY FUNCTION
 -- ============================================================
