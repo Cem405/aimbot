@@ -1624,7 +1624,7 @@ local function startAutoSteal()
                 end
             end
 
-            task.wait(0.15)
+            task.wait(2.5)
         end
     end)
 end
