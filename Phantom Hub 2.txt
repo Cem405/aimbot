@@ -1444,286 +1444,144 @@ end
 -- ============================================================
 -- AUTO STEAL SYSTEM
 -- ============================================================
-
-    AUTO_STEAL_ENABLED = true,
-    HOLD_MIN = 1.3,
-    HOLD_MAX = 2.6,
-    ENTRY_DELAY = 0.3,
-    COOLDOWN = 0.05,
-    STEAL_RANGE = 10,
-    PRIME_RANGE = 80,
-}
-
-local S = {
-    Players = game:GetService("Players"),
-    ReplicatedStorage = game:GetService("ReplicatedStorage"),
-    RunService = game:GetService("RunService"),
-    UserInputService = game:GetService("UserInputService"),
-    TweenService = game:GetService("TweenService"),
-}
-
-local Packages = S.ReplicatedStorage:WaitForChild("Packages")
-local Datas = S.ReplicatedStorage:WaitForChild("Datas")
-
-local Synchronizer = require(Packages:WaitForChild("Synchronizer"))
-local AnimalsData = require(Datas:WaitForChild("Animals"))
-
-S.LocalPlayer = S.Players.LocalPlayer
-
-local allAnimalsCache = {}
-local PromptMemoryCache = {}
-local InternalStealCache = {}
-local stealConnection = nil
-
-local StealState = {
-    active = false,
-    startTime = 0,
-    phase = "idle",
-    label = "",
-    lastResult = "",
-    lastResultTime = 0,
-    totalSteals = 0,
-    failedSteals = 0,
-}
-
-local function isMyBaseAnimal(animalData)
-    if not animalData or not animalData.plot then return false end
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then return false end
-    local plot = plots:FindFirstChild(animalData.plot)
-    if not plot then return false end
-
-    local channel = Synchronizer:Get(plot.Name)
-    if channel then
-        local owner = channel:Get("Owner")
-        if owner then
-            if typeof(owner) == "Instance" and owner:IsA("Player") then
-                return owner.UserId == S.LocalPlayer.UserId
-            elseif typeof(owner) == "table" and owner.UserId then
-                return owner.UserId == S.LocalPlayer.UserId
-            elseif typeof(owner) == "Instance" then
-                return owner == S.LocalPlayer
-            end
-        end
+local function isMyPlotByName(pn)
+    local ct=tick()
+    if Steal.plotCache[pn] and (ct-(Steal.plotCacheTime[pn] or 0))<PLOT_CACHE_DURATION then
+        return Steal.plotCache[pn]
     end
-
-    local sign = plot:FindFirstChild("PlotSign")
+    local plots=workspace:FindFirstChild("Plots")
+    if not plots then Steal.plotCache[pn]=false; Steal.plotCacheTime[pn]=ct; return false end
+    local plot=plots:FindFirstChild(pn)
+    if not plot then Steal.plotCache[pn]=false; Steal.plotCacheTime[pn]=ct; return false end
+    local sign=plot:FindFirstChild("PlotSign")
     if sign then
-        local yourBase = sign:FindFirstChild("YourBase")
-        if yourBase and yourBase:IsA("BillboardGui") then
-            return yourBase.Enabled == true
+        local yb=sign:FindFirstChild("YourBase")
+        if yb and yb:IsA("BillboardGui") then
+            local r=yb.Enabled==true
+            Steal.plotCache[pn]=r
+            Steal.plotCacheTime[pn]=ct
+            return r
         end
     end
+    Steal.plotCache[pn]=false
+    Steal.plotCacheTime[pn]=ct
     return false
 end
 
-local function findProximityPromptForAnimal(animalData)
-    if not animalData then return nil end
-    local cached = PromptMemoryCache[animalData.uid]
-    if cached and cached.Parent then return cached end
-
-    local plot = workspace.Plots:FindFirstChild(animalData.plot)
-    if not plot then return nil end
-    local podiums = plot:FindFirstChild("AnimalPodiums")
-    if not podiums then return nil end
-    local podium = podiums:FindFirstChild(animalData.slot)
-    if not podium then return nil end
-    local base = podium:FindFirstChild("Base")
-    if not base then return nil end
-    local spawn = base:FindFirstChild("Spawn")
-    if not spawn then return nil end
-    local attach = spawn:FindFirstChild("PromptAttachment")
-    if not attach then return nil end
-
-    for _, p in ipairs(attach:GetChildren()) do
-        if p:IsA("ProximityPrompt") then
-            PromptMemoryCache[animalData.uid] = p
-            return p
-        end
-    end
-    return nil
-end
-
-local function getAnimalPosition(animalData)
-    local plot = workspace.Plots:FindFirstChild(animalData.plot)
-    if not plot then return nil end
-    local podiums = plot:FindFirstChild("AnimalPodiums")
-    if not podiums then return nil end
-    local podium = podiums:FindFirstChild(animalData.slot)
-    if not podium then return nil end
-    return podium:GetPivot().Position
-end
-
-local function distToAnimal(animalData)
-    local character = S.LocalPlayer.Character
-    if not character then return math.huge end
-    local hrp = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso")
-    if not hrp then return math.huge end
-    local pos = getAnimalPosition(animalData)
-    if not pos then return math.huge end
-    return (hrp.Position - pos).Magnitude
-end
-
-local function pickClosest()
-    local character = S.LocalPlayer.Character
-    if not character then return nil end
-    local hrp = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso")
-    if not hrp then return nil end
-
-    local best, bestDist = nil, math.huge
-    for _, animalData in ipairs(allAnimalsCache) do
-        if isMyBaseAnimal(animalData) then continue end
-        local pos = getAnimalPosition(animalData)
-        if not pos then continue end
-        local dist = (hrp.Position - pos).Magnitude
-        if dist > CONFIG.PRIME_RANGE then continue end
-        if dist < bestDist then
-            bestDist = dist
-            best = animalData
-        end
-    end
-    return best
-end
-
-local function buildStealCallbacks(prompt)
-    if InternalStealCache[prompt] then return end
-    local data = { holdCallbacks = {}, triggerCallbacks = {}, ready = true }
-
-    local ok1, conns1 = pcall(getconnections, prompt.PromptButtonHoldBegan)
-    if ok1 and type(conns1) == "table" then
-        for _, conn in ipairs(conns1) do
-            if type(conn.Function) == "function" then
-                table.insert(data.holdCallbacks, conn.Function)
+local function findNearestPrompt()
+    local c=LP.Character; if not c then return nil end
+    local root=c:FindFirstChild("HumanoidRootPart"); if not root then return nil end
+    local ct=tick()
+    if ct-Steal.promptCacheTime<PROMPT_CACHE_REFRESH and #Steal.cachedPrompts>0 then
+        local np,nd=nil,math.huge
+        for _,data in ipairs(Steal.cachedPrompts) do
+            if data.spawn then
+                local dist=(data.spawn.Position-root.Position).Magnitude
+                if dist<=Steal.StealRadius and dist<nd then np=data.prompt; nd=dist end
             end
         end
+        if np then return np end
     end
-
-    local ok2, conns2 = pcall(getconnections, prompt.Triggered)
-    if ok2 and type(conns2) == "table" then
-        for _, conn in ipairs(conns2) do
-            if type(conn.Function) == "function" then
-                table.insert(data.triggerCallbacks, conn.Function)
-            end
+    Steal.cachedPrompts={}
+    Steal.promptCacheTime=ct
+    local plots=workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+    local np,nd=nil,math.huge
+    for _,plot in ipairs(plots:GetChildren()) do
+        if isMyPlotByName(plot.Name) then continue end
+        local pods=plot:FindFirstChild("AnimalPodiums")
+        if not pods then continue end
+        for _,pod in ipairs(pods:GetChildren()) do
+            pcall(function()
+                local base=pod:FindFirstChild("Base")
+                local sp=base and base:FindFirstChild("Spawn")
+                if sp then
+                    local att=sp:FindFirstChild("PromptAttachment")
+                    if att then
+                        for _,child in ipairs(att:GetChildren()) do
+                            if child:IsA("ProximityPrompt") then
+                                local dist=(sp.Position-root.Position).Magnitude
+                                table.insert(Steal.cachedPrompts,{prompt=child,spawn=sp})
+                                if dist<=Steal.StealRadius and dist<nd then np=child; nd=dist end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
         end
     end
-
-    if (#data.holdCallbacks > 0) or (#data.triggerCallbacks > 0) then
-        InternalStealCache[prompt] = data
-    end
+    return np
 end
 
-local function executeStealAsync(prompt, animalData)
-    local data = InternalStealCache[prompt]
-    if not data or not data.ready then return false end
-    data.ready = false
-
-    local label = animalData.name or "Animal"
-    StealState.active = true
-    StealState.startTime = tick()
-    StealState.phase = "holding"
-    StealState.label = label
-
+local function executeSteal(prompt)
+    local ct=tick()
+    if ct-State.lastStealTick<STEAL_COOLDOWN then return end
+    if State.isStealing then return end
+    if not Steal.Data[prompt] then
+        Steal.Data[prompt]={hold={},trigger={},ready=true}
+        pcall(function()
+            if getconnections then
+                for _,c in ipairs(getconnections(prompt.PromptButtonHoldBegan)) do
+                    if c.Function then table.insert(Steal.Data[prompt].hold,c.Function) end
+                end
+                for _,c in ipairs(getconnections(prompt.Triggered)) do
+                    if c.Function then table.insert(Steal.Data[prompt].trigger,c.Function) end
+                end
+            else
+                Steal.Data[prompt].useFallback=true
+            end
+        end)
+    end
+    local data=Steal.Data[prompt]
+    if not data.ready then return end
+    data.ready=false
+    State.isStealing=true
+    State.stealStartTime=ct
+    State.lastStealTick=ct
     task.spawn(function()
-        for _, fn in ipairs(data.holdCallbacks) do task.spawn(fn) end
-
-        task.wait(CONFIG.HOLD_MIN)
-
-        StealState.phase = "waitingRange"
-
-        local alreadyInRange = distToAnimal(animalData) <= CONFIG.STEAL_RANGE
-        local fired = false
-        while true do
-            local elapsed = tick() - StealState.startTime
-            if elapsed > CONFIG.HOLD_MAX then break end
-            if not prompt.Parent then break end
-            if distToAnimal(animalData) <= CONFIG.STEAL_RANGE then
-                if not alreadyInRange then task.wait(CONFIG.ENTRY_DELAY) end
-                for _, fn in ipairs(data.triggerCallbacks) do task.spawn(fn) end
-                fired = true
-                break
+        local ok=false
+        pcall(function()
+            if not data.useFallback then
+                for _,fn in ipairs(data.hold) do task.spawn(fn) end
+                task.wait(Steal.StealDuration)
+                for _,fn in ipairs(data.trigger) do task.spawn(fn) end
+                ok=true
             end
-            task.wait()
+        end)
+        if not ok and fireproximityprompt then
+            pcall(function() fireproximityprompt(prompt); ok=true end)
         end
-
-        if fired then
-            StealState.totalSteals = StealState.totalSteals + 1
-            StealState.lastResult = "Stole " .. label
-        else
-            StealState.failedSteals = StealState.failedSteals + 1
-            StealState.lastResult = "Missed window: " .. label
+        if not ok then
+            pcall(function()
+                prompt:InputHoldBegin()
+                task.wait(Steal.StealDuration)
+                prompt:InputHoldEnd()
+            end)
         end
-
-        StealState.active = false
-        StealState.phase = "idle"
-        StealState.lastResultTime = tick()
-
-        task.wait(CONFIG.COOLDOWN)
-        data.ready = true
+        task.wait(Steal.StealDuration*0.3)
+        task.wait(0.05)
+        data.ready=true
+        State.isStealing=false
     end)
-    return true
-end
-
-local function attemptSteal(prompt, animalData)
-    if not prompt or not prompt.Parent then return false end
-    buildStealCallbacks(prompt)
-    if not InternalStealCache[prompt] then return false end
-    return executeStealAsync(prompt, animalData)
-end
-
-local function scanAllPlots()
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then return 0 end
-    local newCache = {}
-
-    for _, plot in ipairs(plots:GetChildren()) do
-        local channel = Synchronizer:Get(plot.Name)
-        if not channel then continue end
-        local animalList = channel:Get("AnimalList")
-        if not animalList then continue end
-        local owner = channel:Get("Owner")
-        if not owner then continue end
-
-        for slot, animalData in pairs(animalList) do
-            if type(animalData) == "table" then
-                local animalName = animalData.Index
-                local animalInfo = AnimalsData[animalName]
-                if not animalInfo then continue end
-
-                table.insert(newCache, {
-                    name = animalInfo.DisplayName or animalName,
-                    plot = plot.Name,
-                    slot = tostring(slot),
-                    uid = plot.Name .. "_" .. tostring(slot),
-                })
-            end
-        end
-    end
-
-    allAnimalsCache = newCache
-    return #allAnimalsCache
 end
 
 local function startAutoSteal()
-    if stealConnection then return end
-    stealConnection = S.RunService.Heartbeat:Connect(function()
-        if not CONFIG.AUTO_STEAL_ENABLED then return end
-        if StealState.active then return end
-
-        local target = pickClosest()
-        if not target then return end
-
-        local prompt = PromptMemoryCache[target.uid]
-        if not prompt or not prompt.Parent then
-            prompt = findProximityPromptForAnimal(target)
-        end
-        if prompt then attemptSteal(prompt, target) end
+    if Conns.autoSteal then return end
+    Conns.autoSteal=RunService.Heartbeat:Connect(function()
+        if not Steal.AutoStealEnabled or State.isStealing then return end
+        local p=findNearestPrompt()
+        if p then executeSteal(p) end
     end)
 end
 
 local function stopAutoSteal()
-    if not stealConnection then return end
-    stealConnection:Disconnect()
-    stealConnection = nil
+    if Conns.autoSteal then Conns.autoSteal:Disconnect(); Conns.autoSteal=nil end
+    State.isStealing=false
+    State.lastStealTick=0
+    Steal.plotCache={}
+    Steal.plotCacheTime={}
+    Steal.cachedPrompts={}
 end
 
 -- ============================================================
