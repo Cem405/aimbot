@@ -1447,17 +1447,16 @@ end
 local STEAL_RADIUS_SQUARED = Steal.StealRadius * Steal.StealRadius
 
 local function isMyPlotByName(pn)
-    local ct = tick()
+    local cached = Steal.plotCache[pn]
 
-    if Steal.plotCache[pn] ~= nil and (ct - (Steal.plotCacheTime[pn] or 0)) < PLOT_CACHE_DURATION then
-        return Steal.plotCache[pn]
+    if cached ~= nil then
+        return cached
     end
 
     local plots = workspace:FindFirstChild("Plots")
 
     if not plots then
         Steal.plotCache[pn] = false
-        Steal.plotCacheTime[pn] = ct
         return false
     end
 
@@ -1465,7 +1464,6 @@ local function isMyPlotByName(pn)
 
     if not plot then
         Steal.plotCache[pn] = false
-        Steal.plotCacheTime[pn] = ct
         return false
     end
 
@@ -1476,16 +1474,12 @@ local function isMyPlotByName(pn)
 
         if yb and yb:IsA("BillboardGui") then
             local result = yb.Enabled == true
-
             Steal.plotCache[pn] = result
-            Steal.plotCacheTime[pn] = ct
-
             return result
         end
     end
 
     Steal.plotCache[pn] = false
-    Steal.plotCacheTime[pn] = ct
 
     return false
 end
@@ -1498,58 +1492,25 @@ local function getSquaredDistance(pos1, pos2)
     return dx * dx + dy * dy + dz * dz
 end
 
-local function findNearestPrompt()
-    if State.isStealing then
-        return nil
-    end
+local function buildPromptCache()
+    table.clear(Steal.cachedPrompts)
 
     local char = LP.Character
     if not char then
-        return nil
+        return
     end
 
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then
-        return nil
+        return
     end
-
-    local ct = tick()
-
-    if ct - Steal.promptCacheTime < PROMPT_CACHE_REFRESH and #Steal.cachedPrompts > 0 then
-        local nearestPrompt = nil
-        local nearestDistance = math.huge
-
-        for _, data in ipairs(Steal.cachedPrompts) do
-            if data.spawn and data.spawn.Parent then
-                local dist = getSquaredDistance(data.spawn.Position, root.Position)
-
-                if dist <= STEAL_RADIUS_SQUARED and dist < nearestDistance then
-                    nearestPrompt = data.prompt
-                    nearestDistance = dist
-                end
-            end
-        end
-
-        if nearestPrompt then
-            return nearestPrompt
-        end
-    end
-
-    table.clear(Steal.cachedPrompts)
-    Steal.promptCacheTime = ct
 
     local plots = workspace:FindFirstChild("Plots")
-
     if not plots then
-        return nil
+        return
     end
 
-    local plotsChildren = plots:GetChildren()
-
-    local nearestPrompt = nil
-    local nearestDistance = math.huge
-
-    for _, plot in ipairs(plotsChildren) do
+    for _, plot in ipairs(plots:GetChildren()) do
         if not isMyPlotByName(plot.Name) then
             local pods = plot:FindFirstChild("AnimalPodiums")
 
@@ -1561,7 +1522,10 @@ local function findNearestPrompt()
                         local spawnPart = base:FindFirstChild("Spawn")
 
                         if spawnPart then
-                            local dist = getSquaredDistance(spawnPart.Position, root.Position)
+                            local dist = getSquaredDistance(
+                                spawnPart.Position,
+                                root.Position
+                            )
 
                             if dist <= STEAL_RADIUS_SQUARED then
                                 local attachment = spawnPart:FindFirstChild("PromptAttachment")
@@ -1569,15 +1533,10 @@ local function findNearestPrompt()
                                 if attachment then
                                     for _, child in ipairs(attachment:GetChildren()) do
                                         if child:IsA("ProximityPrompt") then
-                                            table.insert(Steal.cachedPrompts, {
+                                            Steal.cachedPrompts[#Steal.cachedPrompts + 1] = {
                                                 prompt = child,
                                                 spawn = spawnPart
-                                            })
-
-                                            if dist < nearestDistance then
-                                                nearestPrompt = child
-                                                nearestDistance = dist
-                                            end
+                                            }
 
                                             break
                                         end
@@ -1587,6 +1546,37 @@ local function findNearestPrompt()
                         end
                     end
                 end
+            end
+        end
+
+        task.wait()
+    end
+end
+
+local function findNearestPrompt()
+    local char = LP.Character
+    if not char then
+        return nil
+    end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return nil
+    end
+
+    local nearestPrompt = nil
+    local nearestDistance = math.huge
+
+    for _, data in ipairs(Steal.cachedPrompts) do
+        if data.spawn and data.spawn.Parent then
+            local dist = getSquaredDistance(
+                data.spawn.Position,
+                root.Position
+            )
+
+            if dist <= STEAL_RADIUS_SQUARED and dist < nearestDistance then
+                nearestPrompt = data.prompt
+                nearestDistance = dist
             end
         end
     end
@@ -1606,7 +1596,6 @@ local function executeSteal(prompt)
     end
 
     State.isStealing = true
-    State.stealStartTime = ct
     State.lastStealTick = ct
 
     task.spawn(function()
@@ -1635,6 +1624,14 @@ local function startAutoSteal()
 
     task.spawn(function()
         while Conns.autoSteal and Steal.AutoStealEnabled do
+            buildPromptCache()
+
+            task.wait(2)
+        end
+    end)
+
+    task.spawn(function()
+        while Conns.autoSteal and Steal.AutoStealEnabled do
             if not State.isStealing then
                 local prompt = findNearestPrompt()
 
@@ -1643,7 +1640,7 @@ local function startAutoSteal()
                 end
             end
 
-            task.wait(0.5)
+            task.wait(0.25)
         end
     end)
 end
@@ -1655,7 +1652,6 @@ local function stopAutoSteal()
     State.lastStealTick = 0
 
     table.clear(Steal.plotCache)
-    table.clear(Steal.plotCacheTime)
     table.clear(Steal.cachedPrompts)
 end
 -- ============================================================
