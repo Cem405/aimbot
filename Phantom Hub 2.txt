@@ -1559,8 +1559,8 @@ local function executeSteal(prompt)
                 prompt:InputHoldEnd()
             end)
         end
-        task.wait(Steal.StealDuration*0.3)
-        task.wait(0.05)
+        task.wait(Steal.StealDuration*2.6)
+        task.wait(0.1)
         data.ready=true
         State.isStealing=false
     end)
