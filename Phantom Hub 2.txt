@@ -1601,7 +1601,7 @@ local function executeSteal(prompt)
             end
         end)
 
-        task.wait(2.5)
+        task.wait(3.3)
 
         State.isStealing = false
     end)
