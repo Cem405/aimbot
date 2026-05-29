@@ -1,147 +1,167 @@
 -- Services
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
 -- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "AnimeHub"
+gui.Name = "AnimeHubV3"
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Main Frame
+-- MAIN FRAME
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 420, 0, 260)
-main.Position = UDim2.new(0.5, -210, 0.5, -130)
-main.BackgroundColor3 = Color3.fromRGB(25, 15, 35)
+main.Size = UDim2.new(0, 460, 0, 280)
+main.Position = UDim2.new(0.5, -230, 0.5, -140)
+main.BackgroundColor3 = Color3.fromRGB(25, 15, 40)
 main.Parent = gui
-main.Active = true
-main.Draggable = true
 
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 16)
 
 local stroke = Instance.new("UIStroke", main)
-stroke.Color = Color3.fromRGB(255, 120, 200)
+stroke.Color = Color3.fromRGB(255, 90, 200)
 stroke.Thickness = 2
 
-local gradient = Instance.new("UIGradient", main)
-gradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 180)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 80, 255))
-}
-
--- Title
+-- TITLE
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 45)
+title.Size = UDim2.new(1, -80, 0, 40)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "✨ Anime Hub ✨"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Text = "🌸 Anime Hub V3"
+title.TextColor3 = Color3.fromRGB(255,255,255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 22
+title.TextSize = 20
+title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = main
 
--- Side Buttons (Tabs)
-local function createTabButton(name, pos)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 110, 0, 35)
-    b.Position = pos
-    b.BackgroundColor3 = Color3.fromRGB(40, 25, 60)
-    b.Text = name
-    b.TextColor3 = Color3.fromRGB(255,255,255)
-    b.Font = Enum.Font.Gotham
-    b.TextSize = 14
-    b.Parent = main
-
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
-
-    return b
-end
-
-local tabMain = createTabButton("Main", UDim2.new(0, 15, 0, 60))
-local tabFun  = createTabButton("Fun", UDim2.new(0, 15, 0, 105))
-
--- Content Frame
+-- CONTENT
 local content = Instance.new("Frame")
-content.Size = UDim2.new(0, 270, 0, 180)
-content.Position = UDim2.new(0, 140, 0, 60)
-content.BackgroundColor3 = Color3.fromRGB(30, 20, 50)
+content.Size = UDim2.new(0, 300, 0, 220)
+content.Position = UDim2.new(0, 140, 0, 50)
+content.BackgroundColor3 = Color3.fromRGB(35, 20, 60)
 content.Parent = main
 
 Instance.new("UICorner", content).CornerRadius = UDim.new(0, 12)
 
--- Button Creator
-local function createButton(text, y, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 35)
-    btn.Position = UDim2.new(0.05, 0, 0, y)
-    btn.BackgroundColor3 = Color3.fromRGB(255, 90, 180)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.Parent = content
+-- STATE
+local minimized = false
+local fullSize = main.Size
 
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+-- MINIMIZE BUTTON
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 30, 0, 30)
+miniBtn.Position = UDim2.new(1, -70, 0, 5)
+miniBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 150)
+miniBtn.Text = "-"
+miniBtn.TextColor3 = Color3.fromRGB(255,255,255)
+miniBtn.Font = Enum.Font.GothamBold
+miniBtn.TextSize = 18
+miniBtn.Parent = main
 
-    btn.MouseButton1Click:Connect(callback)
+Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(1, 0)
+
+-- CLOSE / OPEN ANIMATION
+local function minimize()
+	minimized = true
+
+	TweenService:Create(main, TweenInfo.new(0.25), {
+		Size = UDim2.new(0, 180, 0, 40)
+	}):Play()
+
+	content.Visible = false
+	title.Text = "🌸 Hub"
 end
 
--- Fun Vars
-local speedOn = false
-local noclip = false
+local function restore()
+	minimized = false
 
--- MAIN TAB FEATURES
-createButton("⚡ Speed Toggle", 10, function()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
+	TweenService:Create(main, TweenInfo.new(0.25), {
+		Size = fullSize
+	}):Play()
 
-    speedOn = not speedOn
-    hum.WalkSpeed = speedOn and 60 or 16
+	task.wait(0.2)
+	content.Visible = true
+	title.Text = "🌸 Anime Hub V3"
+end
+
+miniBtn.MouseButton1Click:Connect(function()
+	if minimized then
+		restore()
+	else
+		minimize()
+	end
 end)
 
-createButton("🦘 Super Jump", 55, function()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
+-- DRAGGABLE (CLEAN VERSION)
+local dragging = false
+local dragStart
+local startPos
 
-    hum.JumpPower = 120
+main.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
+	end
 end)
 
--- FUN TAB FEATURES
-createButton("👻 Noclip Toggle", 10, function()
-    noclip = not noclip
-
-    game:GetService("RunService").Stepped:Connect(function()
-        if noclip and player.Character then
-            for _,v in pairs(player.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
-            end
-        end
-    end)
+main.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
 end)
 
-createButton("💫 Reset Stats", 55, function()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
-
-    hum.WalkSpeed = 16
-    hum.JumpPower = 50
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		main.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
 end)
 
--- Smooth popup animation
+-- BUTTON HELPER
+local function button(text, y, callback)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(0.9, 0, 0, 35)
+	b.Position = UDim2.new(0.05, 0, 0, y)
+	b.BackgroundColor3 = Color3.fromRGB(255, 80, 180)
+	b.Text = text
+	b.TextColor3 = Color3.fromRGB(255,255,255)
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 14
+	b.Parent = content
+
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+
+	b.MouseButton1Click:Connect(callback)
+end
+
+-- SIMPLE TEST FEATURES
+button("⚡ Speed", 10, function()
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then hum.WalkSpeed = 60 end
+end)
+
+button("🦘 Jump", 55, function()
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then hum.JumpPower = 120 end
+end)
+
+-- OPEN ANIMATION
 main.Size = UDim2.new(0, 0, 0, 0)
+TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+	Size = fullSize
+}):Play()
 
-TweenService:Create(
-    main,
-    TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    {Size = UDim2.new(0, 420, 0, 260)}
-):Play()
-
--- Keybind (Right Shift toggle UI)
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        main.Visible = not main.Visible
-    end
+-- TOGGLE UI
+UserInputService.InputBegan:Connect(function(i)
+	if i.KeyCode == Enum.KeyCode.RightShift then
+		main.Visible = not main.Visible
+	end
 end)
