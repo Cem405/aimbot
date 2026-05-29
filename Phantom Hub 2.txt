@@ -1184,128 +1184,124 @@ end
 -- ============================================================
 -- AUTO LEFT / RIGHT
 -- ============================================================
-local function faceSouth()
-    pcall(function()
-        local c=LP.Character; if not c then return end
-        local root=c:FindFirstChild("HumanoidRootPart")
-        if root then root.CFrame=CFrame.new(root.Position)*CFrame.Angles(0,0,0) end
-    end)
+startAutoLeft = function()
+	if Conns.autoLeft then Conns.autoLeft:Disconnect() end
+	State.autoLeftPhase = 1
+	Conns.autoLeft = RunService.Heartbeat:Connect(function()
+		if not State.autoLeftEnabled then return end
+		local char = LP.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if not root or not hum2 then return end
+		local spd = getAutoMoveSpeed()
+		if State.autoLeftPhase == 1 then
+			local tgt = Vector3.new(POS.L1.X, root.Position.Y, POS.L1.Z)
+			if (tgt - root.Position).Magnitude < 1 then State.autoLeftPhase = 2; return end
+			local d = (POS.L1 - root.Position)
+			local mv = Vector3.new(d.X, 0, d.Z).Unit
+			hum2:Move(mv, false)
+			root.AssemblyLinearVelocity = Vector3.new(mv.X * spd, root.AssemblyLinearVelocity.Y, mv.Z * spd)
+		elseif State.autoLeftPhase == 2 then
+			local tgt = Vector3.new(POS.L2.X, root.Position.Y, POS.L2.Z)
+			if (tgt - root.Position).Magnitude < 1 then
+				hum2:Move(Vector3.zero, false)
+				root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+				State.autoLeftEnabled = false
+				if Conns.autoLeft then Conns.autoLeft:Disconnect(); Conns.autoLeft = nil end
+				State.autoLeftPhase = 1
+				if setAutoLeft then setAutoLeft(false) end
+				if MobileButtons.Buttons.autoLeft then MobileButtons.Buttons.autoLeft(false) end
+				return
+			end
+			local d = (POS.L2 - root.Position)
+			local mv = Vector3.new(d.X, 0, d.Z).Unit
+			hum2:Move(mv, false)
+			root.AssemblyLinearVelocity = Vector3.new(mv.X * spd, root.AssemblyLinearVelocity.Y, mv.Z * spd)
+		end
+	end)
 end
 
-local function faceNorth()
-    pcall(function()
-        local c=LP.Character; if not c then return end
-        local root=c:FindFirstChild("HumanoidRootPart")
-        if root then root.CFrame=CFrame.new(root.Position)*CFrame.Angles(0,math.rad(180),0) end
-    end)
+stopAutoLeft = function()
+	if Conns.autoLeft then Conns.autoLeft:Disconnect(); Conns.autoLeft = nil end
+	State.autoLeftPhase = 1
+	local char = LP.Character
+	if char then
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if hum2 then hum2:Move(Vector3.zero, false) end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root then root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0) end
+	end
+	if MobileButtons.Buttons.autoLeft then MobileButtons.Buttons.autoLeft(false) end
 end
 
-local function startAutoLeft()
-    if Conns.autoLeft then Conns.autoLeft:Disconnect() end
-    State.autoLeftPhase=1
-    Conns.autoLeft=RunService.Heartbeat:Connect(function()
-        if not State.autoLeftEnabled then return end
-        if State.countdownActive then return end  -- ANTI-DETECT: Stop during countdown
-        local c=LP.Character; if not c then return end
-        local root=c:FindFirstChild("HumanoidRootPart")
-        local hum2=c:FindFirstChildOfClass("Humanoid")
-        if not root or not hum2 then return end
-        local spd=State.normalSpeed
-        if State.autoLeftPhase==1 then
-            local tgt=Vector3.new(POS.L1.X,root.Position.Y,POS.L1.Z)
-            if (tgt-root.Position).Magnitude<1 then
-                State.autoLeftPhase=2
-                local d=(POS.L2-root.Position)
-                local mv=Vector3.new(d.X,0,d.Z).Unit
-                hum2:Move(mv,false)
-                root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-                return
-            end
-            local d=(POS.L1-root.Position)
-            local mv=Vector3.new(d.X,0,d.Z).Unit
-            hum2:Move(mv,false)
-            root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-        elseif State.autoLeftPhase==2 then
-            local tgt=Vector3.new(POS.L2.X,root.Position.Y,POS.L2.Z)
-            if (tgt-root.Position).Magnitude<1 then
-                hum2:Move(Vector3.zero,false)
-                root.AssemblyLinearVelocity=Vector3.zero
-                State.autoLeftEnabled=false
-                if Conns.autoLeft then Conns.autoLeft:Disconnect(); Conns.autoLeft=nil end
-                State.autoLeftPhase=1
-                faceSouth()
-                return
-            end
-            local d=(POS.L2-root.Position)
-            local mv=Vector3.new(d.X,0,d.Z).Unit
-            hum2:Move(mv,false)
-            root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-        end
-    end)
+startAutoRight = function()
+	if Conns.autoRight then Conns.autoRight:Disconnect() end
+	State.autoRightPhase = 1
+	Conns.autoRight = RunService.Heartbeat:Connect(function()
+		if not State.autoRightEnabled then return end
+		local char = LP.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if not root or not hum2 then return end
+		local spd = getAutoMoveSpeed()
+		if State.autoRightPhase == 1 then
+			local tgt = Vector3.new(POS.R1.X, root.Position.Y, POS.R1.Z)
+			if (tgt - root.Position).Magnitude < 1 then State.autoRightPhase = 2; return end
+			local d = (POS.R1 - root.Position)
+			local mv = Vector3.new(d.X, 0, d.Z).Unit
+			hum2:Move(mv, false)
+			root.AssemblyLinearVelocity = Vector3.new(mv.X * spd, root.AssemblyLinearVelocity.Y, mv.Z * spd)
+		elseif State.autoRightPhase == 2 then
+			local tgt = Vector3.new(POS.R2.X, root.Position.Y, POS.R2.Z)
+			if (tgt - root.Position).Magnitude < 1 then
+				hum2:Move(Vector3.zero, false)
+				root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+				State.autoRightEnabled = false
+				if Conns.autoRight then Conns.autoRight:Disconnect(); Conns.autoRight = nil end
+				State.autoRightPhase = 1
+				if setAutoRight then setAutoRight(false) end
+				if MobileButtons.Buttons.autoRight then MobileButtons.Buttons.autoRight(false) end
+				return
+			end
+			local d = (POS.R2 - root.Position)
+			local mv = Vector3.new(d.X, 0, d.Z).Unit
+			hum2:Move(mv, false)
+			root.AssemblyLinearVelocity = Vector3.new(mv.X * spd, root.AssemblyLinearVelocity.Y, mv.Z * spd)
+		end
+	end)
 end
 
-local function stopAutoLeft()
-    if Conns.autoLeft then Conns.autoLeft:Disconnect(); Conns.autoLeft=nil end
-    State.autoLeftPhase=1
-    local c=LP.Character
-    if c then
-        local hum2=c:FindFirstChildOfClass("Humanoid")
-        if hum2 then hum2:Move(Vector3.zero,false) end
-    end
+stopAutoRight = function()
+	if Conns.autoRight then Conns.autoRight:Disconnect(); Conns.autoRight = nil end
+	State.autoRightPhase = 1
+	local char = LP.Character
+	if char then
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if hum2 then hum2:Move(Vector3.zero, false) end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if root then root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0) end
+	end
+	if MobileButtons.Buttons.autoRight then MobileButtons.Buttons.autoRight(false) end
 end
 
-local function startAutoRight()
-    if Conns.autoRight then Conns.autoRight:Disconnect() end
-    State.autoRightPhase=1
-    Conns.autoRight=RunService.Heartbeat:Connect(function()
-        if not State.autoRightEnabled then return end
-        if State.countdownActive then return end  -- ANTI-DETECT: Stop during countdown
-        local c=LP.Character; if not c then return end
-        local root=c:FindFirstChild("HumanoidRootPart")
-        local hum2=c:FindFirstChildOfClass("Humanoid")
-        if not root or not hum2 then return end
-        local spd=State.normalSpeed
-        if State.autoRightPhase==1 then
-            local tgt=Vector3.new(POS.R1.X,root.Position.Y,POS.R1.Z)
-            if (tgt-root.Position).Magnitude<1 then
-                State.autoRightPhase=2
-                local d=(POS.R2-root.Position)
-                local mv=Vector3.new(d.X,0,d.Z).Unit
-                hum2:Move(mv,false)
-                root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-                return
-            end
-            local d=(POS.R1-root.Position)
-            local mv=Vector3.new(d.X,0,d.Z).Unit
-            hum2:Move(mv,false)
-            root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-        elseif State.autoRightPhase==2 then
-            local tgt=Vector3.new(POS.R2.X,root.Position.Y,POS.R2.Z)
-            if (tgt-root.Position).Magnitude<1 then
-                hum2:Move(Vector3.zero,false)
-                root.AssemblyLinearVelocity=Vector3.zero
-                State.autoRightEnabled=false
-                if Conns.autoRight then Conns.autoRight:Disconnect(); Conns.autoRight=nil end
-                State.autoRightPhase=1
-                faceNorth()
-                return
-            end
-            local d=(POS.R2-root.Position)
-            local mv=Vector3.new(d.X,0,d.Z).Unit
-            hum2:Move(mv,false)
-            root.AssemblyLinearVelocity=Vector3.new(mv.X*spd,root.AssemblyLinearVelocity.Y,mv.Z*spd)
-        end
-    end)
+startAntiRagdoll = function()
+	if Conns.antiRag then return end
+	Conns.antiRag=RunService.Heartbeat:Connect(function()
+		local char=LP.Character; if not char then return end
+		local hum2=char:FindFirstChildOfClass("Humanoid"); local root=char:FindFirstChild("HumanoidRootPart")
+		if hum2 then
+			local st=hum2:GetState()
+			if st==Enum.HumanoidStateType.Physics or st==Enum.HumanoidStateType.Ragdoll or st==Enum.HumanoidStateType.FallingDown then
+				hum2:ChangeState(Enum.HumanoidStateType.Running); workspace.CurrentCamera.CameraSubject=hum2
+				pcall(function() local pm=LP.PlayerScripts:FindFirstChild("PlayerModule"); if pm then require(pm:FindFirstChild("ControlModule")):Enable() end end)
+				if root then root.Velocity=Vector3.new(0,0,0); root.RotVelocity=Vector3.new(0,0,0) end
+			end
+		end
+		for _,obj in ipairs(char:GetDescendants()) do if obj:IsA("Motor6D") and not obj.Enabled then obj.Enabled=true end end
+	end)
 end
-
-local function stopAutoRight()
-    if Conns.autoRight then Conns.autoRight:Disconnect(); Conns.autoRight=nil end
-    State.autoRightPhase=1
-    local c=LP.Character
-    if c then
-        local hum2=c:FindFirstChildOfClass("Humanoid")
-        if hum2 then hum2:Move(Vector3.zero,false) end
-    end
+stopAntiRagdoll = function()
+	if Conns.antiRag then Conns.antiRag:Disconnect(); Conns.antiRag=nil end
 end
 
 
