@@ -1097,9 +1097,7 @@ main.Name="Main"; main.Size=UDim2.new(0,260,0,450)
 main.Position=UDim2.new(0,20,0,20)
 main.BackgroundColor3=C_BG; main.BorderSizePixel=0; main.Active=true; main.ClipsDescendants=true
 Instance.new("UICorner",main).CornerRadius=UDim.new(0,16)
-local mainStroke = Instance.new("UIStroke",main)
-.Color = Color3.fromRGB(255,0,0)
-mainStroke.Thickness = 2
+local mainStroke = Instance.new("UIStroke",main); mainStroke.Color=C_BORDER2; mainStroke.Thickness=1
 
 
 local function saveMainPosition()
